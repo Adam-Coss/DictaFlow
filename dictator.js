@@ -434,7 +434,17 @@ function getAuxExpressions(word) {
   const exps = [];
   const dbl = getDoubleLetterName(word);
   if (dbl) exps.push(dbl);
-  if (/[-‑]/.test(word)) exps.push('Через дефис');
+  if (/[-‑]/.test(word)) {
+    exps.push('Через дефис');
+    const parts = word.split(/[-‑]/);
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i];
+      if (/^[А-ЯЁ]/.test(part)) {
+        const lower = part[0].toLowerCase() + part.slice(1);
+        exps.push(`${lower} с большой буквы`);
+      }
+    }
+  }
   return exps;
 }
 function getDoubleLetterName(word) {
