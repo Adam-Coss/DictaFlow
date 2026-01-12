@@ -62,6 +62,7 @@ const themeToggle = document.getElementById('theme-toggle');
 const indicator = document.getElementById('indicator');
 const advancedToggle = document.getElementById('advanced-toggle');
 const advancedSection = document.getElementById('advanced-section');
+let wakeLock = null;
 // === Автосохранение текста в localStorage ===
 const LOCAL_TEXT_KEY = 'dictatorText';
 function saveTextToStorage(val) {
@@ -76,6 +77,26 @@ function loadTextFromStorage() {
 function clearTextStorage() {
   try { localStorage.removeItem(LOCAL_TEXT_KEY); } catch (e) {}
 }
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) {}
+}
+
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  try { await wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && isSpeaking && !wakeLock) {
+    requestWakeLock();
+  }
+});
 
 
 const presetsEl = document.getElementById('presets');
@@ -356,6 +377,7 @@ startStopButton.addEventListener('click', () => {
     clearAllTimeouts();
     pauseResumeButton.disabled = false;
     pauseResumeButton.textContent = 'Пауза';
+    requestWakeLock();
 
     // Добавили класс, чтобы показать прогресс-бар только во время диктовки
     document.body.classList.add('speaking');
@@ -492,9 +514,6 @@ function speakWords(words, sentIndex) {
 
       function stepPrepend(cb) {
         if (prependText && !isFirstSentence(sentIndex)) {
-          indicator.textContent = prependText;
-          indicator.classList.add('visible');
-          schedulePauseable(() => indicator.classList.remove('visible'), 2000);
           yandexTtsPlay(
             prependText,
             parseFloat(auxSpeedControl.value),
@@ -618,6 +637,7 @@ function restoreOriginalText() {
   speechStopped = true;
   isPaused = false;
   clearAllTimeouts();
+  releaseWakeLock();
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} activeAudio = null; }
   pauseResumeButton.disabled = true; pauseResumeButton.textContent = 'Пауза';
   sentenceDisplay.style.display = 'none';
