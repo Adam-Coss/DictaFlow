@@ -191,6 +191,7 @@ function schedulePauseable(fn, delay){
 function pauseAll(){
   if (isPaused) return; isPaused = true;
   pauseResumeButton.textContent = 'Продолжить';
+  document.body.classList.add('is-paused');
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} }
   const now = performance.now();
   for (const t of pendingTimeouts) {
@@ -200,6 +201,7 @@ function pauseAll(){
 function resumeAll(){
   if (!isPaused) return; isPaused = false;
   pauseResumeButton.textContent = 'Пауза';
+  document.body.classList.remove('is-paused');
   if (activeAudio && activeAudio.paused) { activeAudio.play().catch(()=>{}); }
   const now = performance.now();
   for (const t of pendingTimeouts.slice()) {
@@ -630,6 +632,7 @@ function unhighlightWord(i) { const sp = document.getElementById(`word-${i}`); i
 function restoreOriginalText() {
   speechStopped = true;
   isPaused = false;
+  document.body.classList.remove('is-paused');
   clearAllTimeouts();
   releaseWakeLock();
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} activeAudio = null; }
