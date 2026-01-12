@@ -103,6 +103,20 @@ body.night-mode .secondary-button:hover { background: rgba(255,255,255,.06); }
 #pause-resume-button:active { transform: translateY(1px); }
 #pause-resume-button:disabled { opacity: .6; cursor: not-allowed; }
 
+body.is-paused #pause-resume-button {
+  border: none;
+  background: var(--primary);
+  color: #fff;
+}
+body.is-paused #pause-resume-button:active { background: var(--primary-pressed); }
+body.is-paused #start-stop-button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: inherit;
+}
+body.is-paused #start-stop-button:active { background: rgba(0,0,0,.04); }
+body.night-mode.is-paused #start-stop-button:active { background: rgba(255,255,255,.06); }
+
 
 /* Отображение диктуемого предложения */
 #sentence-display {
@@ -165,9 +179,6 @@ details[open] .caret { transform: rotate(90deg); }
 .control-group { display: grid; gap: 6px; }
 .control-group label { font-size: 14px; color: var(--muted); }
 input[type="range"] { width: 100%; }
-
-/* Таймер */
-.timer { position: fixed; top: 10px; left: 10px; font-size: 14px; color: var(--muted); }
 
 /* Переключатель темы — оставим как был, слегка подправим */
 .theme-switch { margin-top: 8px; display: flex; align-items: center; gap: 8px; }

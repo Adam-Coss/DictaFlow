@@ -56,12 +56,12 @@ const dictationSizeValue = document.getElementById('dictation-size-value');
 const pasteButton = document.getElementById('paste-button');
 const clearButton = document.getElementById('clear-button');
 const resetButton = document.getElementById('reset-settings-button');
-const timerDisplay = document.getElementById('timer');
 const progressBar = document.getElementById('progress-bar');
 const themeToggle = document.getElementById('theme-toggle');
 const indicator = document.getElementById('indicator');
 const advancedToggle = document.getElementById('advanced-toggle');
 const advancedSection = document.getElementById('advanced-section');
+let wakeLock = null;
 // === Автосохранение текста в localStorage ===
 const LOCAL_TEXT_KEY = 'dictatorText';
 function saveTextToStorage(val) {
@@ -76,6 +76,26 @@ function loadTextFromStorage() {
 function clearTextStorage() {
   try { localStorage.removeItem(LOCAL_TEXT_KEY); } catch (e) {}
 }
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (e) {}
+}
+
+async function releaseWakeLock() {
+  if (!wakeLock) return;
+  try { await wakeLock.release(); } catch (e) {}
+  wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && isSpeaking && !wakeLock) {
+    requestWakeLock();
+  }
+});
 
 
 const presetsEl = document.getElementById('presets');
@@ -171,7 +191,7 @@ function schedulePauseable(fn, delay){
 function pauseAll(){
   if (isPaused) return; isPaused = true;
   pauseResumeButton.textContent = 'Продолжить';
-  pauseTimer();
+  document.body.classList.add('is-paused');
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} }
   const now = performance.now();
   for (const t of pendingTimeouts) {
@@ -181,7 +201,7 @@ function pauseAll(){
 function resumeAll(){
   if (!isPaused) return; isPaused = false;
   pauseResumeButton.textContent = 'Пауза';
-  resumeTimer();
+  document.body.classList.remove('is-paused');
   if (activeAudio && activeAudio.paused) { activeAudio.play().catch(()=>{}); }
   const now = performance.now();
   for (const t of pendingTimeouts.slice()) {
@@ -207,8 +227,6 @@ let originalText = '';
 let sentences = [];
 let currentSentenceIndex = 0;
 let totalSentences = 0;
-let timer = 0;
-let timerInterval = null;
 
 // Буквы => названия (двойная буква)
 const letterSounds = {
@@ -356,6 +374,7 @@ startStopButton.addEventListener('click', () => {
     clearAllTimeouts();
     pauseResumeButton.disabled = false;
     pauseResumeButton.textContent = 'Пауза';
+    requestWakeLock();
 
     // Добавили класс, чтобы показать прогресс-бар только во время диктовки
     document.body.classList.add('speaking');
@@ -366,7 +385,6 @@ startStopButton.addEventListener('click', () => {
 
     speakSentence(sentences[currentSentenceIndex]);
     startStopButton.textContent = 'Стоп';
-    startTimer();
     updateProgressBar();
   } else {
     speechStopped = true;
@@ -416,7 +434,17 @@ function getAuxExpressions(word) {
   const exps = [];
   const dbl = getDoubleLetterName(word);
   if (dbl) exps.push(dbl);
-  if (/[-‑]/.test(word)) exps.push('Через дефис');
+  if (/[-‑]/.test(word)) {
+    exps.push('Через дефис');
+    const parts = word.split(/[-‑]/);
+    for (let i = 1; i < parts.length; i++) {
+      const part = parts[i];
+      if (/^[А-ЯЁ]/.test(part)) {
+        const lower = part[0].toLowerCase() + part.slice(1);
+        exps.push(`${lower} с большой буквы`);
+      }
+    }
+  }
   return exps;
 }
 function getDoubleLetterName(word) {
@@ -492,9 +520,6 @@ function speakWords(words, sentIndex) {
 
       function stepPrepend(cb) {
         if (prependText && !isFirstSentence(sentIndex)) {
-          indicator.textContent = prependText;
-          indicator.classList.add('visible');
-          schedulePauseable(() => indicator.classList.remove('visible'), 2000);
           yandexTtsPlay(
             prependText,
             parseFloat(auxSpeedControl.value),
@@ -617,7 +642,9 @@ function unhighlightWord(i) { const sp = document.getElementById(`word-${i}`); i
 function restoreOriginalText() {
   speechStopped = true;
   isPaused = false;
+  document.body.classList.remove('is-paused');
   clearAllTimeouts();
+  releaseWakeLock();
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} activeAudio = null; }
   pauseResumeButton.disabled = true; pauseResumeButton.textContent = 'Пауза';
   sentenceDisplay.style.display = 'none';
@@ -631,31 +658,10 @@ function restoreOriginalText() {
   // Скрываем прогресс-бар после завершения
   document.body.classList.remove('speaking');
 
-  stopTimer();
   resetProgressBar();
   indicator.textContent = '';
   indicator.classList.remove('visible');
 }
-function startTimer() {
-  timer = 0;
-  timerDisplay.textContent = `Время: ${timer} c`;
-  timerInterval = setInterval(() => {
-    timer++;
-    timerDisplay.textContent = `Время: ${timer} c`;
-  }, 1000);
-}
-function pauseTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-function resumeTimer() {
-  if (!timerInterval) {
-    timerInterval = setInterval(() => {
-      timer++;
-      timerDisplay.textContent = `Время: ${timer} c`;
-    }, 1000);
-  }
-}
-function stopTimer() { pauseTimer(); timer = 0; timerDisplay.textContent = `Время: ${timer} c`; }
 function updateProgressBar() { const p = ((currentSentenceIndex + 1) / totalSentences) * 100; progressBar.style.width = p + '%'; }
 function resetProgressBar() { progressBar.style.width = '0%'; }
 
