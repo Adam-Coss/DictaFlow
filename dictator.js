@@ -492,9 +492,6 @@ function speakWords(words, sentIndex) {
 
       function stepPrepend(cb) {
         if (prependText && !isFirstSentence(sentIndex)) {
-          indicator.textContent = prependText;
-          indicator.classList.add('visible');
-          schedulePauseable(() => indicator.classList.remove('visible'), 2000);
           yandexTtsPlay(
             prependText,
             parseFloat(auxSpeedControl.value),
