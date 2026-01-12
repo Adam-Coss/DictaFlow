@@ -166,9 +166,6 @@ details[open] .caret { transform: rotate(90deg); }
 .control-group label { font-size: 14px; color: var(--muted); }
 input[type="range"] { width: 100%; }
 
-/* Таймер */
-.timer { position: fixed; top: 10px; left: 10px; font-size: 14px; color: var(--muted); }
-
 /* Переключатель темы — оставим как был, слегка подправим */
 .theme-switch { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
 .settings-group .theme-switch + .theme-switch { margin-top: 10px; }
