@@ -56,7 +56,6 @@ const dictationSizeValue = document.getElementById('dictation-size-value');
 const pasteButton = document.getElementById('paste-button');
 const clearButton = document.getElementById('clear-button');
 const resetButton = document.getElementById('reset-settings-button');
-const timerDisplay = document.getElementById('timer');
 const progressBar = document.getElementById('progress-bar');
 const themeToggle = document.getElementById('theme-toggle');
 const indicator = document.getElementById('indicator');
@@ -192,7 +191,6 @@ function schedulePauseable(fn, delay){
 function pauseAll(){
   if (isPaused) return; isPaused = true;
   pauseResumeButton.textContent = 'Продолжить';
-  pauseTimer();
   if (activeAudio) { try { activeAudio.pause(); } catch(e){} }
   const now = performance.now();
   for (const t of pendingTimeouts) {
@@ -202,7 +200,6 @@ function pauseAll(){
 function resumeAll(){
   if (!isPaused) return; isPaused = false;
   pauseResumeButton.textContent = 'Пауза';
-  resumeTimer();
   if (activeAudio && activeAudio.paused) { activeAudio.play().catch(()=>{}); }
   const now = performance.now();
   for (const t of pendingTimeouts.slice()) {
@@ -228,8 +225,6 @@ let originalText = '';
 let sentences = [];
 let currentSentenceIndex = 0;
 let totalSentences = 0;
-let timer = 0;
-let timerInterval = null;
 
 // Буквы => названия (двойная буква)
 const letterSounds = {
@@ -388,7 +383,6 @@ startStopButton.addEventListener('click', () => {
 
     speakSentence(sentences[currentSentenceIndex]);
     startStopButton.textContent = 'Стоп';
-    startTimer();
     updateProgressBar();
   } else {
     speechStopped = true;
@@ -651,31 +645,10 @@ function restoreOriginalText() {
   // Скрываем прогресс-бар после завершения
   document.body.classList.remove('speaking');
 
-  stopTimer();
   resetProgressBar();
   indicator.textContent = '';
   indicator.classList.remove('visible');
 }
-function startTimer() {
-  timer = 0;
-  timerDisplay.textContent = `Время: ${timer} c`;
-  timerInterval = setInterval(() => {
-    timer++;
-    timerDisplay.textContent = `Время: ${timer} c`;
-  }, 1000);
-}
-function pauseTimer() {
-  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-}
-function resumeTimer() {
-  if (!timerInterval) {
-    timerInterval = setInterval(() => {
-      timer++;
-      timerDisplay.textContent = `Время: ${timer} c`;
-    }, 1000);
-  }
-}
-function stopTimer() { pauseTimer(); timer = 0; timerDisplay.textContent = `Время: ${timer} c`; }
 function updateProgressBar() { const p = ((currentSentenceIndex + 1) / totalSentences) * 100; progressBar.style.width = p + '%'; }
 function resetProgressBar() { progressBar.style.width = '0%'; }
 
